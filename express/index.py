@@ -5,13 +5,10 @@ maintainers can work with small slices of the codebase without loading
 everything into context.
 
 Usage:
-    # Configuration only (no LLM, no engine deps)
+    # Configuration only (no engine deps)
     from express.index import config
 
-    # LLM layer only (no engine, no framebuffer)
-    from express.index import LLMClient, CODE_GENERATION_SYSTEM
-
-    # Renderer only (no LLM, no MCP)
+    # Renderer only (no MCP)
     from express.index import EngineManager, FramebufferCapture
 
     # MCP server entry
@@ -24,13 +21,6 @@ from __future__ import annotations
 
 # Configuration (zero dependencies)
 from express.config import Config, config
-
-# LLM layer
-from express.llm.client import LLMClient, LLMResponse
-from express.llm.prompts import (
-    CODE_GENERATION_SYSTEM,
-    SYSTEM_PROMPT_SNIPPET,
-)
 
 # Renderer layer
 from express.renderer.engine import EngineManager, EngineOutput
@@ -46,11 +36,6 @@ __all__ = [
     # Config
     "Config",
     "config",
-    # LLM
-    "LLMClient",
-    "LLMResponse",
-    "CODE_GENERATION_SYSTEM",
-    "SYSTEM_PROMPT_SNIPPET",
     # Renderer
     "EngineManager",
     "EngineOutput",

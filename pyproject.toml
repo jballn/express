@@ -9,7 +9,6 @@ description = "MCP server: direct-to-hardware 2D visual expression via Usagi Eng
 requires-python = ">=3.11"
 dependencies = [
     "mcp>=1.0.0",
-    "httpx>=0.27.0",
     "Pillow>=10.0.0",
 ]
 

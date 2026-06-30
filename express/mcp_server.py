@@ -1,4 +1,4 @@
-"""MCP server: Express — Lua code to visual expression via Usagi Engine.
+"""MCP server: Express — Raw Lua code to visual expression via Usagi Engine.
 
 Registers the render_lua tool and handles JSON-RPC stdio transport
 per the MCP specification.
@@ -40,7 +40,7 @@ RENDER_LUA_TOOL = Tool(
         "a virtual display, captures the frame, upscales to 1360x768, "
         "and writes to the physical framebuffer (/dev/fb0). "
         "Returns a base64 data URL of the captured frame. "
-        "This is a pure language function — no LLM code generation, no healing loop. "
+        "This is a pure language function — the agent formulates the Lua code directly. "
         "Use when you want direct control over the rendering."
     ),
     inputSchema={

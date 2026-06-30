@@ -142,7 +142,7 @@ class EngineManager:
         logger.info("Usagi workspace ready at %s", self.config.usagi_workspace)
 
     def run_with_code(self, lua_code: str, timeout: float | None = None) -> EngineOutput:
-        """Write Lua code to llm_output.lua, run Usagi, capture output.
+        """Write Lua code to the workspace payload file, run Usagi, capture output.
 
         If capture_method is 'xvfb', starts Xvfb, runs Usagi with
         RAYLIB_BACKEND=window pointing at the virtual display, then
@@ -158,8 +158,8 @@ class EngineManager:
         timeout = timeout or self.config.render_timeout
 
         # Write the dynamic payload
-        self.config.llm_output_lua.write_text(lua_code, encoding="utf-8")
-        logger.debug("Wrote %d bytes to llm_output.lua", len(lua_code))
+        self.config.payload_lua.write_text(lua_code, encoding="utf-8")
+        logger.debug("Wrote %d bytes to payload file", len(lua_code))
 
         # Ensure workspace has required assets
         self._ensure_assets()
@@ -232,7 +232,7 @@ class EngineManager:
             self.start_xvfb()
 
             env = self._build_env(headless=True)
-            self.config.llm_output_lua.write_text(lua_code, encoding="utf-8")
+            self.config.payload_lua.write_text(lua_code, encoding="utf-8")
             self._ensure_assets()
 
             start_time = time.monotonic()

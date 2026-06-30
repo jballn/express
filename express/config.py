@@ -15,12 +15,6 @@ from pathlib import Path
 class Config:
     """Immutable configuration backed by environment variables."""
 
-    # ── LLM ──────────────────────────────────────────────────────────
-    llm_endpoint: str = os.environ.get(
-        "EXPRESS_LLM_ENDPOINT", "http://localhost:58008/v1"
-    )
-    llm_model: str = os.environ.get("EXPRESS_LLM_MODEL", "default-model")
-
     # ── Usagi Engine ─────────────────────────────────────────────────
     usagi_bin: Path = field(
         default_factory=lambda: Path(
@@ -66,16 +60,12 @@ class Config:
     palette_size: int = 16
 
     # ── Paths ────────────────────────────────────────────────────────
-    llm_output_lua: Path = field(init=False)
+    payload_lua: Path = field(init=False)
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "llm_output_lua", self.usagi_workspace / "llm_output.lua")
+        object.__setattr__(self, "payload_lua", self.usagi_workspace / "llm_output.lua")
 
     # ── Helpers ──────────────────────────────────────────────────────
-    @property
-    def llm_chat_url(self) -> str:
-        """Full URL for the /v1/chat/completions endpoint."""
-        return f"{self.llm_endpoint.rstrip('/')}/chat/completions"
 
     def ensure_workspace(self) -> None:
         """Create usagi workspace directory if it doesn't exist."""

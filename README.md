@@ -17,7 +17,7 @@ The server reads JSON-RPC requests from stdin and writes responses to stdout.
 ## Architecture
 
 ```
-Upstream LLM Agent (MCP Client)
+Upstream Agent (MCP Client)
          |
          v
   MCP Server (stdio)
@@ -38,7 +38,6 @@ Upstream LLM Agent (MCP Client)
 | Layer | Module | Purpose |
 |---|---|---|
 | **Tools** | `express.tools` | MCP tool implementations (`render_lua`) |
-| **LLM** | `express.llm` | OpenAI-compatible API client and system prompts |
 | **Renderer** | `express.renderer` | Usagi process management, framebuffer capture |
 | **Config** | `express.config` | Environment-driven configuration, workspace setup |
 
@@ -49,7 +48,7 @@ Upstream LLM Agent (MCP Client)
 Runs Lua code through the Usagi engine and captures the result.
 
 1. Starts Xvfb virtual display
-2. Writes Lua code to Usagi workspace (`llm_output.lua`)
+2. Writes Lua code to Usagi workspace (`llm_output.lua` — the payload file that Usagi live-reloads)
 3. Runs Usagi with `RAYLIB_BACKEND=window`
 4. Captures frame via ImageMagick `import`
 5. Upscales to 1360x768 and writes to `/dev/fb0`
@@ -65,7 +64,7 @@ All paths and endpoints are configurable via `config.py` or environment variable
 
 | Variable | Default | Description |
 |---|---|---|
-| `EXPRESS_LLM_ENDPOINT` | `http://localhost:58008/v1` | OpenAI-compatible API endpoint |
+
 | `EXPRESS_RENDER_TIMEOUT` | `30` | Seconds before timeout |
 | `EXPRESS_CAPTURE_METHOD` | `xvfb` | Framebuffer capture method |
 | `EXPRESS_XVFB_DISPLAY` | `99` | Xvfb display number |
@@ -95,7 +94,7 @@ pip install -e .
 python -m pytest tests/ -v
 ```
 
-78 tests across 6 files. All pass.
+75 tests across 4 files. All pass.
 
 ## Lua API Reference
 

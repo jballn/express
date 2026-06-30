@@ -25,7 +25,7 @@ class FramebufferSnapshot:
     """A captured frame from the display."""
 
     data_url: str
-    """Base64-encoded PNG as data URL (for LLM vision input)."""
+    """Base64-encoded PNG as data URL."""
     raw_bytes: bytes
     """Raw PNG bytes."""
     width: int
@@ -48,7 +48,7 @@ class FramebufferCapture:
         """Capture the current screen and return a downsampled snapshot.
 
         Uses the configured capture method to grab the framebuffer,
-        then downsamples to 320x180 for LLM analysis.
+        then downsamples to 320x180.
         """
         method = self.config.capture_method
 

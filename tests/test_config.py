@@ -13,9 +13,6 @@ from express.config import Config
 class TestConfigDefaults:
     """Test default configuration values."""
 
-    def test_llm_endpoint_default(self):
-        assert Config().llm_endpoint == "http://localhost:58008/v1"
-
     def test_canvas_resolution(self):
         c = Config()
         assert c.canvas_width == 320
@@ -37,11 +34,6 @@ class TestConfigDefaults:
 class TestConfigEnvVars:
     """Test environment variable overrides via keyword arguments."""
 
-    def test_llm_endpoint_from_env(self, monkeypatch):
-        monkeypatch.setenv("EXPRESS_LLM_ENDPOINT", "http://test:1234/v1")
-        c = Config(llm_endpoint="http://test:1234/v1")
-        assert c.llm_endpoint == "http://test:1234/v1"
-
     def test_capture_method_from_env(self, monkeypatch):
         monkeypatch.setenv("EXPRESS_CAPTURE_METHOD", "fb0")
         c = Config(capture_method="fb0")
@@ -50,14 +42,6 @@ class TestConfigEnvVars:
 
 class TestConfigHelpers:
     """Test configuration helper methods."""
-
-    def test_llm_chat_url(self):
-        c = Config()
-        assert c.llm_chat_url == "http://localhost:58008/v1/chat/completions"
-
-    def test_llm_chat_url_no_trailing(self):
-        c = Config(llm_endpoint="http://localhost:58008/v1/")
-        assert c.llm_chat_url == "http://localhost:58008/v1/chat/completions"
 
     def test_ensure_workspace(self, tmp_path, monkeypatch):
         workspace = tmp_path / "workspace"
@@ -84,11 +68,11 @@ class TestConfigHelpers:
         assert "llm_output.lua" in content
         assert "pcall" in content
 
-    def test_llm_output_lua_path(self, tmp_path, monkeypatch):
+    def test_payload_lua_path(self, tmp_path, monkeypatch):
         workspace = tmp_path / "workspace"
         monkeypatch.setenv("EXPRESS_USAGI_WORKSPACE", str(workspace))
         c = Config()
-        assert c.llm_output_lua == workspace / "llm_output.lua"
+        assert c.payload_lua == workspace / "llm_output.lua"
 
 
 class TestConfigSingleton:
