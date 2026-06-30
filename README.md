@@ -2,7 +2,7 @@
 
 MCP server for direct-to-hardware 2D visual expression via the Usagi Engine.
 
-Converts natural language descriptions into real-time pixel animations, juice effects, and retro graphics rendered straight to a connected monitor — from a headless, multi-user Linux machine.
+Runs Lua scripts through the Usagi 2D game engine on a headless Linux machine, capturing frames to the physical framebuffer (/dev/fb0).
 
 ## Quick Start
 
@@ -21,8 +21,7 @@ Upstream LLM Agent (MCP Client)
          |
          v
   MCP Server (stdio)
-    ├── render_expression   # NL -> LLM code gen -> self-heal -> framebuffer
-    ├── render_lua          # Raw Lua -> Usagi -> framebuffer (no LLM)
+    └── render_lua        # Raw Lua -> Usagi -> framebuffer
          |
          v
   Usagi Engine (Rust)
@@ -38,33 +37,27 @@ Upstream LLM Agent (MCP Client)
 
 | Layer | Module | Purpose |
 |---|---|---|
-| **Tools** | `express.tools` | MCP tool implementations (`render_expression`, `render_lua`) |
+| **Tools** | `express.tools` | MCP tool implementations (`render_lua`) |
 | **LLM** | `express.llm` | OpenAI-compatible API client and system prompts |
 | **Renderer** | `express.renderer` | Usagi process management, framebuffer capture |
-| **Self-heal** | `express.self_heal` | Screenshot + log analysis, automated Lua correction |
 | **Config** | `express.config` | Environment-driven configuration, workspace setup |
 
-## Tools
-
-### `render_expression`
-
-Generates 2D graphics from natural language descriptions.
-
-1. Sends user intent to local LLM for Lua code generation
-2. Writes code to Usagi workspace (live-reload)
-3. Captures framebuffer snapshot
-4. Self-heals: analyzes console logs + screenshot, corrects Lua code
-5. Returns success status, final code, and framebuffer image
+## Tool
 
 ### `render_lua`
 
-Runs raw Lua code through the Usagi engine directly (no LLM).
+Runs Lua code through the Usagi engine and captures the result.
 
 1. Starts Xvfb virtual display
-2. Runs Usagi with `RAYLIB_BACKEND=window`
-3. Captures frame via ImageMagick `import`
-4. Upscales to 1360x768 and writes to `/dev/fb0`
-5. Returns base64 data URL of captured frame
+2. Writes Lua code to Usagi workspace (`llm_output.lua`)
+3. Runs Usagi with `RAYLIB_BACKEND=window`
+4. Captures frame via ImageMagick `import`
+5. Upscales to 1360x768 and writes to `/dev/fb0`
+6. Returns base64 data URL of captured frame
+
+**Input:** `lua_code` (required) — Complete Lua script with `_init`, `_update`, `_draw` functions. Optional `display_width` and `display_height` (defaults 320x180).
+
+**Output:** JSON with `success`, `code`, `issues`, `console_output`, `duration_seconds`, `framebuffer_url`, `fb0_written`, `fb0_size`.
 
 ## Configuration
 
@@ -72,12 +65,11 @@ All paths and endpoints are configurable via `config.py` or environment variable
 
 | Variable | Default | Description |
 |---|---|---|
-| `EXPRESS_LLM_ENDPOINT` | `http://localhost:11434/v1` | OpenAI-compatible API endpoint |
-| `EXPRESS_MAX_HEAL_PASSES` | `3` | Max self-healing iterations |
+| `EXPRESS_LLM_ENDPOINT` | `http://localhost:58008/v1` | OpenAI-compatible API endpoint |
 | `EXPRESS_RENDER_TIMEOUT` | `30` | Seconds before timeout |
-| `EXPRESS_CAPTURE_METHOD` | `fbgrab` | Framebuffer capture method |
-| `EXPRESS_XVFB_DISPLAY` | `0` | Xvfb display number |
-| `EXPRESS_XVFB_PID_FILE` | `/tmp/express.xvfb.pid` | Xvfb PID file path |
+| `EXPRESS_CAPTURE_METHOD` | `xvfb` | Framebuffer capture method |
+| `EXPRESS_XVFB_DISPLAY` | `99` | Xvfb display number |
+| `EXPRESS_XVFB_PID_FILE` | `/tmp/.express-xvfb.pid` | Xvfb PID file path |
 
 ## Environment Requirements
 
@@ -103,11 +95,11 @@ pip install -e .
 python -m pytest tests/ -v
 ```
 
-112 tests across 8 files. All pass.
+78 tests across 6 files. All pass.
 
 ## Lua API Reference
 
-The Usagi (Pico-8-like) API used by the code generator:
+The Usagi (Pico-8-like) API:
 
 | Function | Description |
 |---|---|

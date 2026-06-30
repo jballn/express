@@ -1,6 +1,6 @@
-"""MCP server: Express — natural language to visual expression.
+"""MCP server: Express — Lua code to visual expression via Usagi Engine.
 
-Registers the render_expression tool and handles JSON-RPC stdio transport
+Registers the render_lua tool and handles JSON-RPC stdio transport
 per the MCP specification.
 """
 
@@ -14,7 +14,6 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import InitializedNotification, TextContent, Tool
 
-from express.tools.render_expression import render_expression
 from express.tools.render_lua import render_lua
 
 logger = logging.getLogger("express.mcp")
@@ -25,36 +24,13 @@ app = Server(
     name="express",
     version="0.1.0",
     instructions=(
-        "Express is a visual expression engine. Use render_expression to "
-        "generate 2D graphics from natural language descriptions."
+        "Express is a visual expression engine. Use render_lua to "
+        "run Lua code through the Usagi 2D engine."
     ),
 )
 
 
 # ── Tool Definitions ────────────────────────────────────────────────
-
-RENDER_EXPRESSION_TOOL = Tool(
-    name="render_expression",
-    description=(
-        "Render a visual expression from natural language. Takes a user intent "
-        "string and returns the generated Lua code, framebuffer screenshot, "
-        "and any issues encountered during rendering. Uses LLM code generation "
-        "and self-healing loop."
-    ),
-    inputSchema={
-        "type": "object",
-        "properties": {
-            "user_intent": {
-                "type": "string",
-                "description": (
-                    "Natural language description of the visual expression "
-                    "to render (e.g., 'draw a red circle in the center')\n"
-                ),
-            },
-        },
-        "required": ["user_intent"],
-    },
-)
 
 RENDER_LUA_TOOL = Tool(
     name="render_lua",
@@ -105,7 +81,7 @@ RENDER_LUA_TOOL = Tool(
 async def handle_list_tools() -> list[Tool]:
     """List available tools."""
     logger.info("Listing tools")
-    return [RENDER_EXPRESSION_TOOL, RENDER_LUA_TOOL]
+    return [RENDER_LUA_TOOL]
 
 
 @app.call_tool(validate_input=True)
@@ -117,23 +93,7 @@ async def handle_tool_call(
     logger.info("Tool call: %s with args: %s", name, json.dumps(arguments)[:200])
 
     try:
-        if name == "render_expression":
-            user_intent = arguments.get("user_intent", "")
-            if not user_intent:
-                return [
-                    TextContent(
-                        type="text",
-                        text="Error: 'user_intent' is required and must be a non-empty string.",
-                    )
-                ]
-            result = render_expression(user_intent)
-            return [
-                TextContent(
-                    type="text",
-                    text=json.dumps(result, indent=2),
-                )
-            ]
-        elif name == "render_lua":
+        if name == "render_lua":
             lua_code = arguments.get("lua_code", "")
             if not lua_code:
                 return [

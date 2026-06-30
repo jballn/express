@@ -24,9 +24,6 @@ class TestConfigDefaults:
     def test_palette_size(self):
         assert Config().palette_size == 16
 
-    def test_max_heal_passes(self):
-        assert Config().max_heal_passes == 3
-
     def test_render_timeout(self):
         assert Config().render_timeout == 30.0
 
@@ -44,11 +41,6 @@ class TestConfigEnvVars:
         monkeypatch.setenv("EXPRESS_LLM_ENDPOINT", "http://test:1234/v1")
         c = Config(llm_endpoint="http://test:1234/v1")
         assert c.llm_endpoint == "http://test:1234/v1"
-
-    def test_max_heal_passes_from_env(self, monkeypatch):
-        monkeypatch.setenv("EXPRESS_MAX_HEAL_PASSES", "10")
-        c = Config(max_heal_passes=10)
-        assert c.max_heal_passes == 10
 
     def test_capture_method_from_env(self, monkeypatch):
         monkeypatch.setenv("EXPRESS_CAPTURE_METHOD", "fb0")

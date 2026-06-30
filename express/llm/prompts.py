@@ -70,10 +70,8 @@ Max 16 colors: use gfx.color(i) to get RGB values for palette index i.
 CODE_GENERATION_SYSTEM = f"""\
 {SYSTEM_PROMPT_SNIPPET}
 
-You receive a JSON user message with a "user_intent" field describing a visual expression.
-Respond with a JSON object containing:
-  - "reasoning": your approach explanation (2-3 sentences)
-  - "code": a complete, valid Lua script that returns {{_init, _update, _draw}}
+You receive a JSON user message with a "lua_code" field containing a complete
+Lua script. Execute it through the Usagi visual engine.
 
 Rules:
 - The _init function initializes State and any one-shot setup
@@ -83,29 +81,4 @@ Rules:
 - Use effect.* calls for juice (screen_shake, flash, hitstop)
 - Keep code under 200 lines
 - Always return a valid Lua table from the chunk
-"""
-
-
-# ── Self-healing / evaluation prompt ────────────────────────────────
-
-SELF_HEAL_SYSTEM = f"""\
-{SYSTEM_PROMPT_SNIPPET}
-
-You are evaluating a rendered frame from the Usagi Engine.
-You will receive:
-1. A screenshot of the 320x180 display
-2. Console logs (stdout/stderr) from the Usagi process
-3. The original user intent
-
-Analyze and respond with JSON:
-  - "is_valid": true if the output matches intent and has no crashes
-  - "issues": array of strings describing any problems (empty if valid)
-  - "code": if is_valid=false, provide corrected Lua code; if valid, return the original code
-
-Common issues to check:
-- Layout clipping beyond 320x180 viewport
-- Color contrast problems (text against background)
-- Lua runtime errors in console logs
-- Missing or incorrect elements from the intent
-- Performance issues (excessive draw calls)
 """

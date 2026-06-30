@@ -58,7 +58,6 @@ class Config:
 
     # ── Timing ───────────────────────────────────────────────────────
     render_timeout: float = float(os.environ.get("EXPRESS_RENDER_TIMEOUT", "30"))
-    max_heal_passes: int = int(os.environ.get("EXPRESS_MAX_HEAL_PASSES", "3"))
     render_wait_ms: int = int(os.environ.get("EXPRESS_RENDER_WAIT_MS", "500"))
 
     # ── Canvas ───────────────────────────────────────────────────────
@@ -96,7 +95,7 @@ class Config:
 -- State table survives hot-reloads (capitalized globals)
 State = State or {}
 
--- ── Dynamic payload (replaced each render_expression call) ─────
+-- ── Dynamic payload (replaced each render_lua call) ────────
 local payload_ok, payload = pcall(loadfile("llm_output.lua"))
 if payload_ok and payload then
     local fn = payload()

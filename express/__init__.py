@@ -2,7 +2,7 @@
 
 Minimal-context entry point for importing individual subsystems:
 
-    from express import config, llm, renderer, self_heal, tools
+    from express import config, llm, renderer, tools
 
 Each submodule exposes only the symbols needed for its layer,
 keeping builder context windows small and focused.
@@ -19,7 +19,6 @@ from express.config import Config, config
 from express.llm.client import LLMClient, LLMResponse
 from express.llm.prompts import (
     CODE_GENERATION_SYSTEM,
-    SELF_HEAL_SYSTEM,
     SYSTEM_PROMPT_SNIPPET,
 )
 
@@ -28,13 +27,9 @@ from express.llm.prompts import (
 from express.renderer.engine import EngineManager, EngineOutput
 from express.renderer.framebuffer import FramebufferCapture
 
-# ── Self-Heal Layer ────────────────────────────────────────────────────
-
-from express.self_heal.evaluator import ExpressionEvaluator
-
 # ── MCP Tools ──────────────────────────────────────────────────────────
 
-from express.tools.render_expression import render_expression
+from express.tools.render_lua import render_lua
 
 # ── MCP Server ─────────────────────────────────────────────────────────
 
@@ -48,16 +43,13 @@ __all__ = [
     "LLMClient",
     "LLMResponse",
     "CODE_GENERATION_SYSTEM",
-    "SELF_HEAL_SYSTEM",
     "SYSTEM_PROMPT_SNIPPET",
     # Renderer
     "EngineManager",
     "EngineOutput",
     "FramebufferCapture",
-    # Self-heal
-    "ExpressionEvaluator",
     # Tools
-    "render_expression",
+    "render_lua",
     # MCP
     "mcp_app",
     "mcp_main",

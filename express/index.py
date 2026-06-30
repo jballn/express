@@ -14,12 +14,6 @@ Usage:
     # Renderer only (no LLM, no MCP)
     from express.index import EngineManager, FramebufferCapture
 
-    # Self-heal only
-    from express.index import ExpressionEvaluator
-
-    # Full tool (all layers)
-    from express.index import render_expression
-
     # MCP server entry
     from express.index import create_server
 
@@ -35,7 +29,6 @@ from express.config import Config, config
 from express.llm.client import LLMClient, LLMResponse
 from express.llm.prompts import (
     CODE_GENERATION_SYSTEM,
-    SELF_HEAL_SYSTEM,
     SYSTEM_PROMPT_SNIPPET,
 )
 
@@ -43,11 +36,8 @@ from express.llm.prompts import (
 from express.renderer.engine import EngineManager, EngineOutput
 from express.renderer.framebuffer import FramebufferCapture, FramebufferSnapshot
 
-# Self-heal layer
-from express.self_heal.evaluator import ExpressionEvaluator, EvaluationResult
-
 # Tool layer
-from express.tools.render_expression import render_expression
+from express.tools.render_lua import render_lua
 
 # MCP server
 from express.mcp_server import create_server, main
@@ -60,18 +50,14 @@ __all__ = [
     "LLMClient",
     "LLMResponse",
     "CODE_GENERATION_SYSTEM",
-    "SELF_HEAL_SYSTEM",
     "SYSTEM_PROMPT_SNIPPET",
     # Renderer
     "EngineManager",
     "EngineOutput",
     "FramebufferCapture",
     "FramebufferSnapshot",
-    # Self-heal
-    "ExpressionEvaluator",
-    "EvaluationResult",
     # Tool
-    "render_expression",
+    "render_lua",
     # MCP server
     "create_server",
     "main",
