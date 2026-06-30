@@ -64,7 +64,6 @@ All paths and endpoints are configurable via `config.py` or environment variable
 
 | Variable | Default | Description |
 |---|---|---|
-
 | `EXPRESS_RENDER_TIMEOUT` | `30` | Seconds before timeout |
 | `EXPRESS_CAPTURE_METHOD` | `xvfb` | Framebuffer capture method |
 | `EXPRESS_XVFB_DISPLAY` | `99` | Xvfb display number |
@@ -94,7 +93,7 @@ pip install -e .
 python -m pytest tests/ -v
 ```
 
-75 tests across 4 files. All pass.
+56 tests across 4 files. All pass.
 
 ## Lua API Reference
 
