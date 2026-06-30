@@ -35,9 +35,6 @@ usagi-workspace/
 # Xvfb PID files
 *.pid
 
-# Usagi source (local repo, not tracked)
-usagi-source/
-
 # OS
 .DS_Store
 Thumbs.db

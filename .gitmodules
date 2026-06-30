@@ -1,0 +1,3 @@
+[submodule "usagi-source"]
+	path = usagi-source
+	url = https://github.com/brettchalupa/usagi
