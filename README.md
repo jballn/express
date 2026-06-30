@@ -95,24 +95,36 @@ python -m pytest tests/ -v
 
 56 tests across 4 files. All pass.
 
-## Lua API Reference
+## Agent Skill: Lua Reference
 
-The Usagi (Pico-8-like) API:
+Agents using this MCP server should load the **`express-lua-reference`** skill. It provides:
 
-| Function | Description |
-|---|---|
-| `gfx.clear(color)` | Clear screen |
-| `gfx.rect(x, y, w, h, color)` | Outline rectangle |
-| `gfx.rect_fill(x, y, w, h, color)` | Filled rectangle |
-| `gfx.circ(x, y, r, color)` | Outline circle |
-| `gfx.circ_fill(x, y, r, color)` | Filled circle |
-| `gfx.line(x1, y1, x2, y2, color)` | Line |
-| `gfx.print(text, x, y, color)` | Text |
-| `gfx.spr(n, x, y, w, h, flip_x, flip_y)` | Sprite |
+- Complete Usagi API reference (gfx, input, effect, util, usagi)
+- Pico-8 → Usagi function mapping (Usagi does NOT have `cls()`, `print()`, `btn()`)
+- Coordinate system rules, color palette, state management
+- Common pitfalls and working code examples
+- Quick-reference cheat sheet for all drawing primitives
 
-Color constants: `gfx.COLOR_BLACK=1` through `gfx.COLOR_PEACH=16`.
+Load it with: `skill_view(name='express-lua-reference')`
 
-Effects: `effect.screen_shake(intensity, duration)`, `effect.flash(color, duration)`.
+## Lua API Quick Reference
+
+For a quick lookup, here are the core Usagi (Pico-8-like) functions:
+
+|| Function | Description |
+||---|---|
+|| `gfx.clear(color)` | Clear screen to color (call first in _draw) |
+|| `gfx.rect(x, y, w, h, color)` | Outline rectangle (top-left origin) |
+|| `gfx.rect_fill(x, y, w, h, color)` | Filled rectangle |
+|| `gfx.circ(x, y, r, color)` | Circle outline (center origin) |
+|| `gfx.circ_fill(x, y, r, color)` | Filled circle |
+|| `gfx.line(x1, y1, x2, y2, color)` | Line |
+|| `gfx.text(text, x, y, color)` | Text (top-left origin) |
+|| `gfx.spr(index, x, y)` | Sprite (1-based index) |
+
+Color constants: `gfx.COLOR_BLACK` (1) through `gfx.COLOR_PEACH` (16), plus `gfx.COLOR_TRUE_WHITE` (0).
+
+Effects: `effect.screen_shake(duration, intensity)`, `effect.flash(duration, color)`, `effect.hitstop(duration)`, `effect.slow_mo(duration, scale)`.
 
 ## License
 
