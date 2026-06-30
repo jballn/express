@@ -1,0 +1,40 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Usagi workspace (generated)
+usagi-workspace/
+
+# Framebuffer captures
+/tmp/express_capture_*.png
+
+# Xvfb PID files
+*.pid
+
+# OS
+.DS_Store
+Thumbs.db
