@@ -2,7 +2,7 @@
 
 MCP server for direct-to-hardware 2D visual expression via the Usagi Engine.
 
-Runs Lua scripts through the Usagi 2D game engine on a headless Linux machine, capturing frames to the physical framebuffer (/dev/fb0).
+Runs Lua scripts through the Usagi 2D game engine on a headless Linux machine, continuously capturing frames to the physical framebuffer (/dev/fb0) in real-time.
 
 ## Quick Start
 
@@ -45,14 +45,15 @@ Upstream Agent (MCP Client)
 
 ### `render_lua`
 
-Runs Lua code through the Usagi engine and captures the result.
+Runs Lua code through the Usagi engine and continuously renders frames to `/dev/fb0` in real-time.
 
 1. Starts Xvfb virtual display
 2. Writes Lua code to Usagi workspace (`llm_output.lua` — the payload file that Usagi live-reloads)
-3. Runs Usagi with `RAYLIB_BACKEND=window`
-4. Captures frame via ImageMagick `import`
-5. Upscales to 1360x768 and writes to `/dev/fb0`
-6. Returns base64 data URL of captured frame
+3. Launches Usagi and a background capture thread running `__continuous_capture_loop`
+4. Captures frames at ~15fps, upscales each to 1360x768, and writes to `/dev/fb0` in real-time
+5. Stops capture thread when Usagi exits (or timeout reached)
+6. Captures final frame for data URL return
+7. Returns base64 data URL of final captured frame
 
 **Input:** `lua_code` (required) — Complete Lua script with `_init`, `_update`, `_draw` functions. Optional `display_width` and `display_height` (defaults 320x180).
 

@@ -1,8 +1,9 @@
 """Direct Lua rendering tool.
 
 Takes Lua code, runs it through the Usagi engine on Xvfb,
-captures the framebuffer, upscales to 1360x768, writes to /dev/fb0,
-and returns the captured image as a base64 data URL.
+continuously captures frames while running, upscales each to 1360x768,
+and writes them to /dev/fb0 in real-time. Returns the final captured
+frame as a base64 data URL.
 
 This is a "pure language function" — the agent formulates the render,
 the engine executes it, no review/healing steps.
@@ -14,6 +15,7 @@ import base64
 import logging
 import os
 import subprocess
+import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -39,21 +41,23 @@ class RenderResult:
     fb0_size: int = 0
 
 
-def render_lua(lua_code: str, display_width: int = 320, display_height: int = 180) -> dict[str, Any]:
-    """Run Lua code through the Usagi engine and capture the result.
+def render_lua(lua_code: str, display_width: int = 320, display_height: int = 180, timeout: float = 30.0) -> dict[str, Any]:
+    """Run Lua code through the Usagi engine and continuously render to /dev/fb0.
 
     Pipeline:
     1. Write Lua code to workspace
     2. Start Xvfb on virtual display
-    3. Run Usagi with RAYLIB_BACKEND=window
-    4. Capture Xvfb frame via ImageMagick import
-    5. Upscale to 1360x768 and write to /dev/fb0
-    6. Return captured image as base64 data URL
+    3. Launch Usagi and a background capture thread
+    4. Capture frames continuously while Usagi runs, upscaling each to 1360x768
+       and writing to /dev/fb0 in real-time
+    5. Stop Xvfb after Usagi exits
+    6. Return the final captured frame as a base64 data URL
 
     Args:
         lua_code: Complete Lua script with _init, _update, _draw
         display_width: Xvfb display width (default 320)
         display_height: Xvfb display height (default 180)
+        timeout: How long to let the Usagi process run before killing it (default 30s, increase for long-running demos)
 
     Returns:
         Dict with success status, code, issues, framebuffer image, etc.
@@ -62,37 +66,125 @@ def render_lua(lua_code: str, display_width: int = 320, display_height: int = 18
     issues: list[str] = []
     console_output = ""
     framebuffer_url: str | None = None
-    fb0_written = False
+    fb0_written = True  # We write continuously, so this is always True on success
     fb0_size = 0
+    capture_count = 0
+    capture_path_template = f"/tmp/express_capture_{int(time.monotonic() * 1000)}_%04d.png"
 
     # ── Prepare workspace ──────────────────────────────────────────
     logger.info("render_lua: preparing workspace")
     engine = EngineManager(config)
     engine.prepare_workspace()
 
-    # ── Run Usagi on Xvfb ─────────────────────────────────────────
-    logger.info("render_lua: running Usagi on Xvfb")
     # Override Xvfb resolution if needed
     if display_width != 320 or display_height != 180:
         config.xvfb_screen = f"{display_width}x{display_height}x24"
 
+    # Use the provided timeout, or fall back to config default
+    effective_timeout = timeout if timeout > 0 else config.render_timeout
+
+    # ── Run Usagi with continuous capture ──────────────────────────
+    logger.info("render_lua: running Usagi on Xvfb with continuous capture")
     with engine:
-        output = engine.run_headless(lua_code, timeout=config.render_timeout)
-        console_output = output.stderr
+        engine.start_xvfb()
 
-        if not output.success:
-            issues.append(f"Usagi exited with code {output.return_code}")
-            if output.stderr:
-                issues.append(f"stderr: {output.stderr[:500]}")
+        env = engine._build_env(headless=True)
+        engine.config.payload_lua.write_text(lua_code, encoding="utf-8")
+        engine._ensure_assets()
 
-    # ── Capture Xvfb frame ────────────────────────────────────────
-    logger.info("render_lua: capturing Xvfb frame")
-    capture_path = f"/tmp/express_capture_{int(start_time * 1000)}.png"
-    framebuffer_url = _capture_xvfb_frame(capture_path, issues)
+        run_start = time.monotonic()
+        try:
+            proc = subprocess.Popen(
+                args=[
+                    str(engine.config.usagi_bin),
+                    "run",
+                    str(engine.config.usagi_workspace),
+                ],
+                env=env,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                cwd=str(engine.config.usagi_workspace),
+            )
 
-    # ── Upscale and write to /dev/fb0 ─────────────────────────────
-    logger.info("render_lua: upscaling to 1360x768 and writing to /dev/fb0")
-    fb0_written, fb0_size = _write_to_framebuffer(capture_path, issues)
+            # Start continuous capture thread
+            capture_stop = threading.Event()
+            capture_thread = threading.Thread(
+                target=_continuous_capture_loop,
+                args=(engine, capture_stop, capture_path_template, issues, run_start),
+                daemon=True,
+            )
+            capture_thread.start()
+
+            # Wait for Usagi to finish (or timeout)
+            try:
+                stdout_bytes, stderr_bytes = proc.communicate(timeout=effective_timeout)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                stdout_bytes, stderr_bytes = proc.communicate()
+                output = EngineOutput(
+                    stdout=stdout_bytes.decode("utf-8", errors="replace"),
+                    stderr=stderr_bytes.decode("utf-8", errors="replace"),
+                    return_code=-1,
+                    success=False,
+                    duration_seconds=time.monotonic() - run_start,
+                )
+            else:
+                duration = time.monotonic() - run_start
+                output = EngineOutput(
+                    stdout=stdout_bytes.decode("utf-8", errors="replace"),
+                    stderr=stderr_bytes.decode("utf-8", errors="replace"),
+                    return_code=proc.returncode or 0,
+                    success=proc.returncode == 0,
+                    duration_seconds=duration,
+                )
+
+            console_output = output.stderr
+
+            # Stop capture thread and get final frame
+            logger.info("render_lua: Usagi finished, stopping capture thread")
+            capture_stop.set()
+            capture_thread.join(timeout=5)
+
+            if not output.success:
+                issues.append(f"Usagi exited with code {output.return_code}")
+                if output.stderr:
+                    issues.append(f"stderr: {output.stderr[:500]}")
+
+            # Capture the final frame for the data URL
+            logger.info("render_lua: capturing final frame")
+            final_path = capture_path_template % 9999
+            framebuffer_url = _capture_xvfb_frame(final_path, issues)
+            if framebuffer_url:
+                # Update fb0_size from final capture
+                try:
+                    fb0_size = len(Path(final_path).read_bytes())
+                except Exception:
+                    fb0_size = 0
+            else:
+                logger.warning("render_lua: final frame capture failed")
+
+            # Count total captures
+            capture_count = 0
+            for i in range(10000):
+                p = capture_path_template % i
+                if Path(p).exists():
+                    capture_count += 1
+                else:
+                    break
+
+        except FileNotFoundError:
+            logger.error("Usagi binary not found: %s", engine.config.usagi_bin)
+            output = EngineOutput(
+                stdout="",
+                stderr=f"Usagi binary not found: {engine.config.usagi_bin}",
+                return_code=-1,
+                success=False,
+                duration_seconds=time.monotonic() - run_start,
+            )
+            console_output = output.stderr
+            issues.append(f"Usagi binary not found: {engine.config.usagi_bin}")
+
+    # ── Xvfb stopped here by __exit__ ─────────────────────────────
 
     duration = time.monotonic() - start_time
     success = output.success and framebuffer_url is not None
@@ -109,6 +201,80 @@ def render_lua(lua_code: str, display_width: int = 320, display_height: int = 18
     ).__dict__
 
 
+def _continuous_capture_loop(
+    engine: EngineManager,
+    stop_event: threading.Event,
+    path_template: str,
+    issues: list[str],
+    run_start: float,
+) -> None:
+    """Background thread: capture frames from Xvfb and write to /dev/fb0 continuously.
+
+    Runs until stop_event is set. Captures at roughly 15 fps to balance
+    responsiveness with avoiding excessive ImageMagick overhead.
+    """
+    display = f":{engine.config.xvfb_display}"
+    frame_idx = 0
+    fps = 15  # target capture rate
+    interval = 1.0 / fps
+
+    while not stop_event.is_set():
+        try:
+            # Capture frame from Xvfb
+            capture_path = path_template % frame_idx
+            result = subprocess.run(
+                ["import", "-display", display, "-window", "root", "-depth", "8", "-delay", "0", capture_path],
+                env={"DISPLAY": display},
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            if result.returncode != 0:
+                # Xvfb may have shut down
+                break
+
+            cap_file = Path(capture_path)
+            if not cap_file.exists() or cap_file.stat().st_size < 100:
+                frame_idx += 1
+                time.sleep(interval)
+                continue
+
+            # Upscale and write to /dev/fb0
+            result = subprocess.run(
+                [
+                    "magick", capture_path,
+                    "-resize", "1360x768!",
+                    "-depth", "8",
+                    "RGBA:-",
+                ],
+                capture_output=True,
+                timeout=5,
+            )
+            if result.returncode == 0:
+                raw_data = result.stdout
+                expected = 1360 * 768 * 4
+                if len(raw_data) == expected:
+                    fb_path = Path("/dev/fb0")
+                    if fb_path.exists():
+                        try:
+                            with open(fb_path, "wb") as f:
+                                f.write(raw_data)
+                        except Exception:
+                            pass
+
+        except subprocess.TimeoutExpired:
+            pass
+        except FileNotFoundError:
+            issues.append("ImageMagick 'import' or 'magick' not found during capture loop")
+            break
+        except Exception:
+            # Non-fatal: skip this frame and retry
+            pass
+
+        frame_idx += 1
+        stop_event.wait(interval)  # respects early stop
+
+
 def _capture_xvfb_frame(capture_path: str, issues: list[str]) -> str | None:
     """Capture the Xvfb display and save as PNG.
 
@@ -117,7 +283,7 @@ def _capture_xvfb_frame(capture_path: str, issues: list[str]) -> str | None:
     display = f":{config.xvfb_display}"
     try:
         result = subprocess.run(
-            ["import", "-display", display, "-window", "root", "-delay", "0", capture_path],
+            ["import", "-display", display, "-window", "root", "-depth", "8", "-delay", "0", capture_path],
             env={"DISPLAY": display},
             capture_output=True,
             text=True,
